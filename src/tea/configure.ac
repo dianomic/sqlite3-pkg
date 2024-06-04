@@ -1,201 +1,270 @@
-#!/bin/bash -norc
-dnl	This file is an input file used by the GNU "autoconf" program to
-dnl	generate the file "configure", which is run during Tcl installation
-dnl	to configure the system for the local environment.
+
+#-----------------------------------------------------------------------
+# Supports the following non-standard switches.
 #
-# RCS: @(#) $Id: configure.in,v 1.43 2005/07/26 19:17:05 mdejong Exp $
-
-#-----------------------------------------------------------------------
-# Sample configure.in for Tcl Extensions.  The only places you should
-# need to modify this file are marked by the string __CHANGE__
-#-----------------------------------------------------------------------
-
-#-----------------------------------------------------------------------
-# __CHANGE__
-# Set your package name and version numbers here.
+#   --enable-threadsafe
+#   --enable-readline
+#   --enable-editline
+#   --enable-static-shell
+#   --enable-dynamic-extensions
 #
-# This initializes the environment with PACKAGE_NAME and PACKAGE_VERSION
-# set as provided.  These will also be added as -D defs in your Makefile
-# so you can encode the package version directly into the source files.
-#-----------------------------------------------------------------------
 
-AC_INIT([sqlite], [3.28.0])
+AC_PREREQ(2.61)
+AC_INIT(sqlite, 3.45.3, http://www.sqlite.org)
+AC_CONFIG_SRCDIR([sqlite3.c])
+AC_CONFIG_AUX_DIR([.])
 
-#--------------------------------------------------------------------
-# Call TEA_INIT as the first TEA_ macro to set up initial vars.
-# This will define a ${TEA_PLATFORM} variable == "unix" or "windows"
-# as well as PKG_LIB_FILE and PKG_STUB_LIB_FILE.
-#--------------------------------------------------------------------
+# Use automake.
+AM_INIT_AUTOMAKE([foreign])
 
-TEA_INIT([3.9])
+AC_SYS_LARGEFILE
 
-AC_CONFIG_AUX_DIR(tclconfig)
+# Check for required programs.
+AC_PROG_CC
+AC_PROG_LIBTOOL
+AC_PROG_MKDIR_P
 
-#--------------------------------------------------------------------
-# Load the tclConfig.sh file
-#--------------------------------------------------------------------
-
-TEA_PATH_TCLCONFIG
-TEA_LOAD_TCLCONFIG
-
-#--------------------------------------------------------------------
-# Load the tkConfig.sh file if necessary (Tk extension)
-#--------------------------------------------------------------------
-
-#TEA_PATH_TKCONFIG
-#TEA_LOAD_TKCONFIG
-
-#-----------------------------------------------------------------------
-# Handle the --prefix=... option by defaulting to what Tcl gave.
-# Must be called after TEA_LOAD_TCLCONFIG and before TEA_SETUP_COMPILER.
-#-----------------------------------------------------------------------
-
-TEA_PREFIX
-
-#-----------------------------------------------------------------------
-# Standard compiler checks.
-# This sets up CC by using the CC env var, or looks for gcc otherwise.
-# This also calls AC_PROG_CC, AC_PROG_INSTALL and a few others to create
-# the basic setup necessary to compile executables.
-#-----------------------------------------------------------------------
-
-TEA_SETUP_COMPILER
-
-#-----------------------------------------------------------------------
-# __CHANGE__
-# Specify the C source files to compile in TEA_ADD_SOURCES,
-# public headers that need to be installed in TEA_ADD_HEADERS,
-# stub library C source files to compile in TEA_ADD_STUB_SOURCES,
-# and runtime Tcl library files in TEA_ADD_TCL_SOURCES.
-# This defines PKG(_STUB)_SOURCES, PKG(_STUB)_OBJECTS, PKG_HEADERS
-# and PKG_TCL_SOURCES.
-#-----------------------------------------------------------------------
-
-TEA_ADD_SOURCES([tclsqlite3.c])
-TEA_ADD_HEADERS([])
-TEA_ADD_INCLUDES([-I\"`\${CYGPATH} \${srcdir}/generic`\"])
-TEA_ADD_LIBS([])
-TEA_ADD_CFLAGS([-DSQLITE_ENABLE_FTS3=1])
-TEA_ADD_CFLAGS([-DSQLITE_3_SUFFIX_ONLY=1])
-TEA_ADD_CFLAGS([-DSQLITE_ENABLE_RTREE=1])
-TEA_ADD_STUB_SOURCES([])
-TEA_ADD_TCL_SOURCES([])
-
-#--------------------------------------------------------------------
-# The --with-system-sqlite causes the TCL bindings to SQLite to use
-# the system shared library for SQLite rather than statically linking
-# against its own private copy.  This is dangerous and leads to
-# undersirable dependences and is not recommended.
-# Patchs from rmax.
-#--------------------------------------------------------------------
-AC_ARG_WITH([system-sqlite],
- [AC_HELP_STRING([--with-system-sqlite],
-   [use a system-supplied libsqlite3 instead of the bundled one])],
- [], [with_system_sqlite=no])
-if test x$with_system_sqlite != xno; then
- AC_CHECK_HEADER([sqlite3.h],
-   [AC_CHECK_LIB([sqlite3],[sqlite3_initialize],
-     [AC_DEFINE(USE_SYSTEM_SQLITE)
-      LIBS="$LIBS -lsqlite3"])])
-fi
-
-#--------------------------------------------------------------------
-# __CHANGE__
-# Choose which headers you need.  Extension authors should try very
-# hard to only rely on the Tcl public header files.  Internal headers
-# contain private data structures and are subject to change without
-# notice.
-# This MUST be called after TEA_LOAD_TCLCONFIG / TEA_LOAD_TKCONFIG
-#--------------------------------------------------------------------
-
-TEA_PUBLIC_TCL_HEADERS
-#TEA_PRIVATE_TCL_HEADERS
-
-#TEA_PUBLIC_TK_HEADERS
-#TEA_PRIVATE_TK_HEADERS
-#TEA_PATH_X
-
-#--------------------------------------------------------------------
-# Check whether --enable-threads or --disable-threads was given.
-# This auto-enables if Tcl was compiled threaded.
-#--------------------------------------------------------------------
-
-TEA_ENABLE_THREADS
-if test "${TCL_THREADS}" = "1" ; then
-    AC_DEFINE(SQLITE_THREADSAFE, 1, [Trigger sqlite threadsafe build])
-    # Not automatically added by Tcl because its assumed Tcl links to them,
-    # but it may not if it isn't really a threaded build.
-    TEA_ADD_LIBS([$THREADS_LIBS])
-else
-    AC_DEFINE(SQLITE_THREADSAFE, 0, [Trigger sqlite non-threadsafe build])
-fi
-
-#--------------------------------------------------------------------
-# The statement below defines a collection of symbols related to
-# building as a shared library instead of a static library.
-#--------------------------------------------------------------------
-
-TEA_ENABLE_SHARED
-
-#--------------------------------------------------------------------
-# This macro figures out what flags to use with the compiler/linker
-# when building shared/static debug/optimized objects.  This information
-# can be taken from the tclConfig.sh file, but this figures it all out.
-#--------------------------------------------------------------------
-
-TEA_CONFIG_CFLAGS
-
-#--------------------------------------------------------------------
-# Set the default compiler switches based on the --enable-symbols option.
-#--------------------------------------------------------------------
-
-TEA_ENABLE_SYMBOLS
-
-#--------------------------------------------------------------------
-# Everyone should be linking against the Tcl stub library.  If you
-# can't for some reason, remove this definition.  If you aren't using
-# stubs, you also need to modify the SHLIB_LD_LIBS setting below to
-# link against the non-stubbed Tcl library.  Add Tk too if necessary.
-#--------------------------------------------------------------------
-
-AC_DEFINE(USE_TCL_STUBS, 1, [Use Tcl stubs])
-#AC_DEFINE(USE_TK_STUBS, 1, [Use Tk stubs])
-
-
-#--------------------------------------------------------------------
-# Redefine fdatasync as fsync on systems that lack fdatasync
-#--------------------------------------------------------------------
-#
-#AC_CHECK_FUNC(fdatasync, , AC_DEFINE(fdatasync, fsync))
 # Check for library functions that SQLite can optionally use.
 AC_CHECK_FUNCS([fdatasync usleep fullfsync localtime_r gmtime_r])
-
 AC_FUNC_STRERROR_R
 
+AC_CONFIG_FILES([Makefile sqlite3.pc])
+BUILD_CFLAGS=
+AC_SUBST(BUILD_CFLAGS)
 
-#--------------------------------------------------------------------
-# This macro generates a line to use when building a library.  It
-# depends on values set by the TEA_ENABLE_SHARED, TEA_ENABLE_SYMBOLS,
-# and TEA_LOAD_TCLCONFIG macros above.
-#--------------------------------------------------------------------
+#-------------------------------------------------------------------------
+# Two options to enable readline compatible libraries: 
+#
+#   --enable-editline
+#   --enable-readline
+#
+# Both are enabled by default. If, after command line processing both are
+# still enabled, the script searches for editline first and automatically
+# disables readline if it is found. So, to use readline explicitly, the
+# user must pass "--disable-editline". To disable command line editing
+# support altogether, "--disable-editline --disable-readline".
+#
+# When searching for either library, check for headers before libraries 
+# as some distros supply packages that contain libraries but not header
+# files, which come as a separate development package.
+#
+AC_ARG_ENABLE(editline, [AS_HELP_STRING([--enable-editline],[use BSD libedit])])
+AC_ARG_ENABLE(readline, [AS_HELP_STRING([--enable-readline],[use readline])])
 
-TEA_MAKE_LIB
+AS_IF([ test x"$enable_editline" != xno ],[
+  AC_CHECK_HEADERS([editline/readline.h],[
+    sLIBS=$LIBS
+    LIBS=""
+    AC_SEARCH_LIBS([readline],[edit],[
+      AC_DEFINE([HAVE_EDITLINE],1,Define to use BSD editline)
+      READLINE_LIBS="$LIBS -ltinfo"
+      enable_readline=no
+    ],[],[-ltinfo])
+    AS_UNSET(ac_cv_search_readline)
+    LIBS=$sLIBS
+  ])
+])
 
-#--------------------------------------------------------------------
-# Determine the name of the tclsh and/or wish executables in the
-# Tcl and Tk build directories or the location they were installed
-# into. These paths are used to support running test cases only,
-# the Makefile should not be making use of these paths to generate
-# a pkgIndex.tcl file or anything else at extension build time.
-#--------------------------------------------------------------------
+AS_IF([ test x"$enable_readline" != xno ],[
+  AC_CHECK_HEADERS([readline/readline.h],[
+    sLIBS=$LIBS
+    LIBS=""
+    AC_SEARCH_LIBS(tgetent, termcap curses ncurses ncursesw, [], [])
+    AC_SEARCH_LIBS(readline,[readline edit], [
+      AC_DEFINE([HAVE_READLINE],1,Define to use readline or wrapper)
+      READLINE_LIBS=$LIBS
+    ])
+    LIBS=$sLIBS
+  ])
+])
 
-TEA_PROG_TCLSH
-#TEA_PROG_WISH
+AC_SUBST(READLINE_LIBS)
+#-----------------------------------------------------------------------
 
-#--------------------------------------------------------------------
-# Finally, substitute all of the various values into the Makefile.
-# You may alternatively have a special pkgIndex.tcl.in or other files
-# which require substituting th AC variables in.  Include these here.
-#--------------------------------------------------------------------
+#-----------------------------------------------------------------------
+#   --enable-threadsafe
+#
+AC_ARG_ENABLE(threadsafe, [AS_HELP_STRING(
+  [--enable-threadsafe], [build a thread-safe library [default=yes]])], 
+  [], [enable_threadsafe=yes])
+if test x"$enable_threadsafe" == "xno"; then
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_THREADSAFE=0"
+else
+  BUILD_CFLAGS="$BUILD_CFLAGS -D_REENTRANT=1 -DSQLITE_THREADSAFE=1"
+  AC_SEARCH_LIBS(pthread_create, pthread)
+  AC_SEARCH_LIBS(pthread_mutexattr_init, pthread)
+fi
+#-----------------------------------------------------------------------
 
-AC_OUTPUT([Makefile pkgIndex.tcl])
+#-----------------------------------------------------------------------
+#   --enable-dynamic-extensions
+#
+AC_ARG_ENABLE(dynamic-extensions, [AS_HELP_STRING(
+  [--enable-dynamic-extensions], [support loadable extensions [default=yes]])], 
+  [], [enable_dynamic_extensions=yes])
+if test x"$enable_dynamic_extensions" != "xno"; then
+  AC_SEARCH_LIBS(dlopen, dl)
+else
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_OMIT_LOAD_EXTENSION=1"
+fi
+AC_MSG_CHECKING([for whether to support dynamic extensions])
+AC_MSG_RESULT($enable_dynamic_extensions)
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#   --enable-math
+#
+AC_ARG_ENABLE(math, [AS_HELP_STRING(
+  [--enable-math], [SQL math functions [default=yes]])],
+  [], [enable_math=yes])
+AC_MSG_CHECKING([SQL math functions])
+if test x"$enable_math" = "xyes"; then
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_ENABLE_MATH_FUNCTIONS"
+  AC_MSG_RESULT([enabled])
+  AC_SEARCH_LIBS(ceil, m)
+else
+  AC_MSG_RESULT([disabled])
+fi
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#   --enable-fts4
+#
+AC_ARG_ENABLE(fts4, [AS_HELP_STRING(
+  [--enable-fts4], [include fts4 support [default=yes]])], 
+  [], [enable_fts4=yes])
+AC_MSG_CHECKING([FTS4 extension])
+if test x"$enable_fts4" = "xyes"; then
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_ENABLE_FTS4"
+  AC_MSG_RESULT([enabled])
+else
+  AC_MSG_RESULT([disabled])
+fi
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#   --enable-fts3
+#
+AC_ARG_ENABLE(fts3, [AS_HELP_STRING(
+  [--enable-fts3], [include fts3 support [default=no]])], 
+  [], [])
+AC_MSG_CHECKING([FTS3 extension])
+if test x"$enable_fts3" = "xyes" -a x"$enable_fts4" = "xno"; then
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_ENABLE_FTS3"
+  AC_MSG_RESULT([enabled])
+else
+  AC_MSG_RESULT([disabled])
+fi
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#   --enable-fts5
+#
+AC_ARG_ENABLE(fts5, [AS_HELP_STRING(
+  [--enable-fts5], [include fts5 support [default=yes]])], 
+  [], [enable_fts5=yes])
+AC_MSG_CHECKING([FTS5 extension])
+if test x"$enable_fts5" = "xyes"; then
+  AC_MSG_RESULT([enabled])
+  AC_SEARCH_LIBS(log, m)
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_ENABLE_FTS5"
+else
+  AC_MSG_RESULT([disabled])
+fi
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#   --enable-rtree
+#
+AC_ARG_ENABLE(rtree, [AS_HELP_STRING(
+  [--enable-rtree], [include rtree support [default=yes]])], 
+  [], [enable_rtree=yes])
+AC_MSG_CHECKING([RTREE extension])
+if test x"$enable_rtree" = "xyes"; then
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_ENABLE_RTREE -DSQLITE_ENABLE_GEOPOLY"
+  AC_MSG_RESULT([enabled])
+else
+  AC_MSG_RESULT([disabled])
+fi
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#   --enable-session
+#
+AC_ARG_ENABLE(session, [AS_HELP_STRING(
+  [--enable-session], [enable the session extension [default=no]])], 
+  [], [])
+AC_MSG_CHECKING([Session extension])
+if test x"$enable_session" = "xyes"; then
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_ENABLE_SESSION -DSQLITE_ENABLE_PREUPDATE_HOOK"
+  AC_MSG_RESULT([enabled])
+else
+  AC_MSG_RESULT([disabled])
+fi
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#   --enable-debug
+#
+AC_ARG_ENABLE(debug, [AS_HELP_STRING(
+  [--enable-debug], [build with debugging features enabled [default=no]])], 
+  [], [])
+AC_MSG_CHECKING([Build type])
+if test x"$enable_debug" = "xyes"; then
+  BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_DEBUG -DSQLITE_ENABLE_SELECTTRACE -DSQLITE_ENABLE_WHERETRACE"
+  CFLAGS="-g -O0"
+  AC_MSG_RESULT([debug])
+else
+  AC_MSG_RESULT([release])
+fi
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#   --enable-static-shell
+#
+AC_ARG_ENABLE(static-shell, [AS_HELP_STRING(
+  [--enable-static-shell], 
+  [statically link libsqlite3 into shell tool [default=yes]])], 
+  [], [enable_static_shell=yes])
+if test x"$enable_static_shell" = "xyes"; then
+  EXTRA_SHELL_OBJ=sqlite3-sqlite3.$OBJEXT
+else
+  EXTRA_SHELL_OBJ=libsqlite3.la
+fi
+AC_SUBST(EXTRA_SHELL_OBJ)
+#-----------------------------------------------------------------------
+
+AC_CHECK_FUNCS(posix_fallocate)
+AC_CHECK_HEADERS(zlib.h,[
+  AC_SEARCH_LIBS(deflate,z,[BUILD_CFLAGS="$BUILD_CFLAGS -DSQLITE_HAVE_ZLIB"])
+])
+
+AC_SEARCH_LIBS(system,,,[SHELL_CFLAGS="-DSQLITE_NOHAVE_SYSTEM"])
+AC_SUBST(SHELL_CFLAGS)
+
+#-----------------------------------------------------------------------
+# UPDATE: Maybe it's better if users just set CFLAGS before invoking
+# configure. This option doesn't really add much...
+#
+#   --enable-tempstore
+#
+# AC_ARG_ENABLE(tempstore, [AS_HELP_STRING(
+#   [--enable-tempstore], 
+#   [in-memory temporary tables (never, no, yes, always) [default=no]])], 
+#   [], [enable_tempstore=no])
+# AC_MSG_CHECKING([for whether or not to store temp tables in-memory])
+# case "$enable_tempstore" in
+#   never )  TEMP_STORE=0 ;;
+#   no )     TEMP_STORE=1 ;;
+#   always ) TEMP_STORE=3 ;;
+#   yes )    TEMP_STORE=3 ;;
+#   * )
+#     TEMP_STORE=1
+#     enable_tempstore=yes
+#   ;;
+# esac
+# AC_MSG_RESULT($enable_tempstore)
+# AC_SUBST(TEMP_STORE)
+#-----------------------------------------------------------------------
+
+AC_OUTPUT
